@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html>
+<meta charset="utf-8">
+<style>
+    body, html { font-family: sans-serif; }
+
+    svg { position:fixed; top:0; left:0; height:100%; width:100%; z-index: -1; }
+    .heavy { font-size: 20px; }
+    .number { font-size: 60px; text-align: left; }
+
+    .view-buttons { position: fixed; text-align: left; top: 0; left: 0; margin: 30px; }
+    .view-buttons div { text-align: center; margin-bottom: 10px; }
+
+    .figure { margin-left: 20%; margin-top: 5%; }
+    .sick { color: red; }
+    .recovered { color: green; }
+    .dead { color: black; }
+
+    .row { text-align:right; padding-right: 15px; padding-top: 32px; }
+
+    .flags { margin-left: 2.5%; margin-top: 7%; }
+    .flags tr { height: 100px; }
+    .flags td { width: 70px; }
+    .flags .time-buttons { text-align: left; margin-left: 30px; margin-top: 10px; }
+
+    .image { cursor: pointer; }
+
+    .description { top: 0; left: 0; margin: auto; text-align: center; }
+    .description > .title { font-size: 40px; margin-top: 40px; }
+    .description > .subtitle { font-size: 20px; margin-top: 10px; }
+</style>
+<body>
+    <div class="description">
+        
+        <div class="title">Corona Incidents in Austria</div>
+        <div class="subtitle">
+            Current figures of the corona COVID-19 disease, distributed througout the Austrian states. <br/>
+            Figures according to federal ministry of health. 
+            See <a href="//sozialministerium.at/Themen/Gesundheit">sozialministerium.at/Themen/Gesundheit</a> for more infomation.
+        </div>
+        <div id="updated" class="subtitle"></div>
+
+        <div class="view-buttons">
+            <div>Select your view </div>
+            <button onclick="change('map')">Status quo</button>
+            <button onclick="change('history')">History</button>
+        </div>
+
+        <!-- ===================== [VIEWS] ======================== -->
+
+        <div id="figure" class="figure" style="display: none;">
+            <table>
+                <tr>
+                    <td class="heavy row">infected</td>
+                    <td id="sick" class="number sick" valign="bottom"></td>
+                </tr>
+                <tr>
+                    <td class="heavy row">recovered</td>
+                    <td id="recovered" class="number recovered" valign="bottom"></td>
+                </tr>
+                <tr>
+                    <td class="heavy row">dead</td>
+                    <td id="dead" class="number dead" valign="bottom"></td>
+                </tr>
+            </table>
+        </div>
+        <div id="flags" class="flags" style="display: none;">
+            <input id="flag" type="hidden" value="all"/>
+            <table>
+                <tr style="height: 50px;">
+                    <td colspan="3">Select the federal country you want to inspect</td>
+                </tr>
+                <tr>
+                    <td colspan="3">
+                        <img class="image" title="Austria" src="flags/flag_austria.png" width="70px"
+                            onclick="history('all')"
+                            id="flag_all">
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        <img class="image" title="Upper Austria" src="flags/flag_upper_austria.png" width="50px"
+                            onclick="history('oberösterreich')"
+                            id="flag_oberösterreich">
+                    </td>
+                    <td>
+                        <img class="image" title="Lower Austria" src="flags/flag_lower_austria.png" width="50px"
+                            onclick="history('niederösterreich')"
+                            id="flag_niederösterreich">
+                    </td>
+                    <td>
+                        <img class="image" title="Vienna Austria" src="flags/flag_vienna.png" width="50px"
+                            onclick="history('wien')"
+                            id="flag_wien">
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        <img class="image" title="Salzburg" src="flags/flag_salzburg.png" width="50px"
+                            onclick="history('salzburg')"
+                            id="flag_salzburg">
+                    </td>
+                    <td>
+                        <img class="image" title="Styria" src="flags/flag_styria.png" width="50px"
+                            onclick="history('steiermark')"
+                            id="flag_steiermark">
+                    </td>
+                    <td>
+                        <img class="image" title="Burgenland" src="flags/flag_burgenland.png" width="50px"
+                            onclick="history('burgenland')"
+                            id="flag_burgenland">
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        <img class="image" title="Karinthia" src="flags/flag_karinthia.png" width="50px"
+                            onclick="history('kärnten')"
+                            id="flag_kärnten">
+                    </td>
+                    <td>
+                        <img class="image" title="Tyrol" src="flags/flag_tyrol.png" width="50px"
+                            onclick="history('tirol')"
+                            id="flag_tirol">
+                    </td>
+                    <td>
+                        <img class="image" title="Vorarlberg" src="flags/flag_vorarlberg.png" width="50px"
+                            onclick="history('vorarlberg')"
+                            id="flag_vorarlberg">
+                    </td>
+                </tr>
+            </table>
+            <div class="time-buttons">
+                <button onclick="history_time('hour')">By hour</button>
+                <button onclick="history_time('day')">By day</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://d3js.org/d3.v4.js"></script>
+    <script src="https://d3js.org/d3-scale-chromatic.v1.min.js"></script>
+    <script src="https://d3js.org/d3-geo-projection.v2.min.js"></script>
+    <script src="constants.js"></script>
+    <script src="map.js"></script>
+    <script src="history.js"></script>
+    <script>
+        // setTimeout(() => {
+        //     window.location.reload(false)
+        // }, 30000)
+
+        async function getMeta() {
+            const response = await fetch("meta.txt")
+            return response.text()
+        }
+
+        async function main() {
+            meta = await getMeta()
+            document.getElementById("updated").textContent = `Updated at ${meta}`
+
+            map()
+        }
+
+        function change(view) {
+            document.getElementById("flag").value = 'all';
+
+            if (view === "map") {
+                document.getElementById("figure").style.display = ''
+                document.getElementById("flags").style.display = 'none'
+                map()
+            }
+            if (view === "history") {
+                document.getElementById("figure").style.display = 'none'
+                document.getElementById("flags").style.display = ''
+                history()
+            }
+        }
+
+        main()
+    </script>
+</body>
+</html>

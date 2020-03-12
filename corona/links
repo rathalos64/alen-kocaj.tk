@@ -1,0 +1,15 @@
+https://bost.ocks.org/mike/map/ --> how, explanation
+https://www.diva-gis.org/ --> Data (Shapefile)
+https://mapshaper.org/ --> export
+
+www.sozialministerium.at/Themen/Gesundheit/Uebertragbare-Krankheiten/Infektionskrankheiten-A-Z/Neuartiges-Coronavirus.html
+
+https://geojson.org/
+https://github.com/topojson/topojson
+https://www.google.com/search?client=ubuntu&channel=fs&q=austria+shapefile&ie=utf-8&oe=utf-8
+https://www.data.gv.at/auftritte/?organisation=statistik-austria&searchterm=gliederung&nr=2
+https://www.data.gv.at/katalog/dataset/stat_gliederung-osterreichs-in-gemeinden14f53
+
+https://www.d3-graph-gallery.com/graph/choropleth_basic.html
+https://observablehq.com/@d3/choropleth
+https://www.d3-graph-gallery.com/graph/backgroundmap_country.html
