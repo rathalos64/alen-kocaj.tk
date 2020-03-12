@@ -87,3 +87,7 @@ pre {
 footer  {
   text-align: center;
 }
+
+img {
+  border-radius: 20px;
+}
