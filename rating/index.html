@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+	<meta name="viewport" content="width=320" />
+	<meta name="apple-mobile-web-app-capable" content="yes" />
+	<title>Nimbusec Cyber Risk Score</title>
+    <script src="https://d3js.org/d3.v4.js"></script>
+    <script src="https://d3js.org/d3-color.v1.min.js"></script>
+    <script src="https://d3js.org/d3-interpolate.v1.min.js"></script>
+    <script src="https://d3js.org/d3-scale-chromatic.v1.min.js"></script>
+	<style>
+	body {
+		font-family:  Helvetica, Arial, sans-serif;
+		margin: 32px;
+	}
+
+    .title {
+        font-size: 24px;
+    }
+
+    .meta {
+        width: 100%
+    }
+
+    .meta table {
+        margin: auto;
+    }
+
+    .subscores {
+        padding: 100px;
+    }
+
+    .subscores td {
+        padding-right: 25px;
+    }
+
+    table.gauge {
+        width: 100%;
+    }
+
+	.gauge g.arc {
+		fill: steelblue;
+	}
+
+	.gauge g.pointer {
+		fill: #e85116;
+		stroke: black;
+	}
+	
+	.gauge g.label text {
+		text-anchor: middle;
+		font-size: 16px;
+		font-weight: bold;
+		fill: #fff;
+	}
+
+    .gauge g.score {
+        font-size: 48px;
+    }
+
+    .gauge g.subscore {
+        font-size: 32px;
+    }
+
+    .gauge {
+        text-align: center;
+    }
+
+    .gauge td {
+        width: 50%;
+    }
+	</style>
+</head>
+<body>
+    <div class="meta">
+        <table>
+            <tr>
+                <td class="subscores">
+                    <table>
+                        <tr>
+                            <td>Mit Zeiger</td>
+                            <td><input id="checkHand" type="checkbox" checked="true"/></td>
+                        </tr>
+                        <tr>
+                            <td>Mit Metrik</td>
+                            <td><input id="checkMetric" type="checkbox" checked="true"/></td>
+                        </tr>
+                        <tr>
+                            <td>Mit Progressbar</td>
+                            <td><input id="checkProgress" type="checkbox" checked="true"/></td>
+                        </tr>
+                        <tr>
+                            <td>Mit Subratings</td>
+                            <td><input id="checkSubrating" type="checkbox"/></td>
+                        </tr>
+                        <!-- <tr>
+                            <td>Weight Audit</td>
+                            <td><input id="weight-audit" type="number" value="0.6"/></td>
+                        </tr> -->
+                    </table>
+                </td>
+                <td class="subscores">
+                    <table>
+                        <tr>
+                            <td>Web Reputation</td>
+                            <td><input id="webrep" type="number" value="0"/></td>
+                        </tr>
+                        <tr>
+                            <td>Self Assessment</td>
+                            <td><input id="selfass" type="number" value="0"/></td>
+                        </tr>
+                        <tr>
+                            <td>Audit</td>
+                            <td><input id="audit" type="number" value="0"/></td>
+                        </tr>
+                    </table>
+                </td>
+                <td class="subscores">
+                    <table>
+                        <tr>
+                            <td>Gewichtung Web Reputation</td>
+                            <td><input id="weight-webrep" type="number" value="0.1"/></td>
+                        </tr>
+                        <tr>
+                            <td>Gewichtung Self Assessment</td>
+                            <td><input id="weight-selfass" type="number" value="0.3"/></td>
+                        </tr>
+                        <tr>
+                            <td>Gewichtung Audit</td>
+                            <td><input id="weight-audit" type="number" value="0.6"/></td>
+                        </tr>
+                    </table>
+                </td>
+            </tr>
+        </table>
+    </div>
+    <div>
+        <table class="gauge">
+            <tr>
+                <td>
+                    <div>
+                        <div class="title">Rating mit Vollständigkeit (Konfidenz)</div>
+                        <div class="subtitle">
+                            Rating ist unabhängig der Stage. Je weitere Stage erhöht die Vollständigkeit (wie viele Stages wurden durchgeführt?) <br/> als seperate Metrik.
+                            Der Score errechnet sich aus den Stages multipliziert nach ihrer Gewichtung.
+                        </div>
+                        <br/>
+                        <div id="rating-confidence" class="gauge"></div>
+                        <input id="rating-confidence-number" type="hidden" value="0"/> 
+                        <input id="rating-confidence-confidence" type="hidden" value="0.0"/> 
+                    </div>
+                    <div id="rating-confidence-subrating" style="display: none">
+                        <span id="rating-confidence-webrep" class="gauge subrating"></span>
+                        <span id="rating-confidence-selfass" class="gauge subrating"></span>
+                        <span id="rating-confidence-audit" class="gauge subrating"></span>
+                    </div>
+                </td>
+                <td>
+                    <div>
+                        <div class="title">Subtraktives Rating</div>
+                        <div class="subtitle">
+                            Rating besteht aus einer Zahl, welche die Vollständigkeit und das Scoring
+                            mit in Betracht zieht.<br/> Je mehr Daten (Stages), desto genauer, besser und potenziell
+                            positiver wirkt sich das auf das Endrating aus. 
+                        </div>
+                        <br/>
+                        <div id="rating-subtraction" class="gauge"></div>
+                        <input id="rating-subtraction-number" type="hidden" value="0"/>
+                    </div>
+                    <div id="rating-subtraction-subrating" style="display: none">
+                        <span id="rating-subtraction-webrep" class="gauge subrating"></span>
+                        <span id="rating-subtraction-selfass" class="gauge subrating"></span>
+                        <span id="rating-subtraction-audit" class="gauge subrating"></span>
+                    </div>
+                </td>
+            </tr>
+        </table>
+    </div>
+        
+    <script src="gauge.js"></script>
+    <script>
+        var ratingConfidence = gauge('#rating-confidence', {
+            size: 500,
+            clipWidth: 500,
+            clipHeight: 500,
+            ringWidth: 130,
+            maxValue: 700,
+            transitionMs: 750,
+            hasHand: true,
+            hasMetric: true,
+            hasProgressBar: true,
+        });
+        ratingConfidence.render(0);
+        ratingConfidence.update(0);
+
+        var ratingSubtraction = gauge('#rating-subtraction', {
+            size: 500,
+            clipWidth: 500,
+            clipHeight: 500,
+            ringWidth: 130,
+            maxValue: 700,
+            transitionMs: 750,
+            hasHand: true,
+            hasMetric: true,
+            hasProgressbar: false,
+        });
+        ratingSubtraction.render(0);
+        ratingSubtraction.update(0);
+
+        check = () => {
+            const checkHand        = document.getElementById("checkHand").checked
+            const checkMetric      = document.getElementById("checkMetric").checked
+            const checkProgress    = document.getElementById("checkProgress").checked
+            const checkSubrating   = document.getElementById("checkSubrating").checked
+
+            const newConfiguration = {
+                hasHand: checkHand,
+                hasMetric: checkMetric,
+            }
+
+            const currentRatingConfidence            = document.getElementById("rating-confidence-number").value
+            const currentRatingConfidenceConfidence  = document.getElementById("rating-confidence-confidence").value
+            
+            const currentRatingSubtraction = document.getElementById("rating-subtraction-number").value
+
+            const confidenceConfiguration = {
+                ...newConfiguration,
+                hasProgressBar: checkProgress
+            }
+            ratingConfidence.update(currentRatingConfidence, confidenceConfiguration)
+            ratingConfidence.confidence(currentRatingConfidenceConfidence)
+
+            ratingSubtraction.update(currentRatingSubtraction, newConfiguration)
+
+            if (checkSubrating) {
+                document.getElementById("rating-confidence-subrating").style.display = ""
+                document.getElementById("rating-subtraction-subrating").style.display = ""
+            } else {
+                document.getElementById("rating-confidence-subrating").style.display = "none"
+                document.getElementById("rating-subtraction-subrating").style.display = "none"
+            }
+        }
+
+        change = () => {
+            const webrep  = parseInt(document.getElementById("webrep").value) || 0
+            const selfass = parseInt(document.getElementById("selfass").value) || 0
+            const audit   = parseInt(document.getElementById("audit").value) || 0
+
+            const weightWebrep  = parseFloat(document.getElementById("weight-webrep").value) || 0.0
+            const weightSelfass = parseFloat(document.getElementById("weight-selfass").value) || 0.0
+            const weightAudit   = parseFloat(document.getElementById("weight-audit").value) || 0.0
+
+            let confidence = 0
+            if (webrep !== 0)  confidence += weightWebrep
+            if (selfass !== 0) confidence += weightSelfass
+            if (audit !== 0)   confidence += weightAudit
+
+            const adjWeightWebrep  = weightWebrep / (confidence <= 0 ? 1 : confidence);
+            const adjWeightSelfass = weightSelfass / (confidence <= 0 ? 1 : confidence);
+            const adjWeightAudit   = weightAudit / (confidence <= 0 ? 1 : confidence);
+
+            const confidenceRating = Math.round(
+                webrep * adjWeightWebrep +
+                selfass * adjWeightSelfass +
+                audit * adjWeightAudit
+            )
+            ratingConfidenceSubratings[0].update(Math.round(webrep * adjWeightWebrep))
+            ratingConfidenceSubratings[1].update(Math.round(selfass * adjWeightSelfass))
+            ratingConfidenceSubratings[2].update(Math.round(audit * adjWeightAudit))
+
+            let webrepFactor = (700 - webrep)
+            let selfassFactor = (700 - selfass)
+            let auditFactor = (700 - audit)
+
+            if (webrepFactor == 700)  webrepFactor = 0
+            if (selfassFactor == 700) selfassFactor = 0
+            if (auditFactor == 700)   auditFactor = 0
+
+            let subtractionRating = 0
+            if (webrepFactor + selfass + auditFactor > 0) {
+                subtractionRating = Math.round(700 - 
+                    (webrepFactor * weightWebrep +
+                    selfassFactor * weightSelfass +
+                    auditFactor * weightAudit) 
+                )
+            }         
+
+            ratingSubtractionSubratings[0].update(Math.round(webrepFactor * weightWebrep))
+            ratingSubtractionSubratings[1].update(Math.round(selfassFactor * weightSelfass))
+            ratingSubtractionSubratings[2].update(Math.round(auditFactor * weightAudit))
+
+            ratingConfidence.update(confidenceRating);
+            ratingConfidence.confidence(confidence);
+
+            ratingSubtraction.update(subtractionRating);
+
+            document.getElementById("rating-confidence-number").value = confidenceRating
+            document.getElementById("rating-confidence-confidence").value = confidence
+            document.getElementById("rating-subtraction-number").value = subtractionRating
+        }
+
+        document.querySelectorAll("input[type='number']").forEach((input) => {
+            input.addEventListener("change", change)
+        })
+
+        document.querySelectorAll("input[type='checkbox']").forEach((input) => {
+            input.addEventListener("click", check)
+        })
+
+        // ======================================================================
+
+
+        let ratingConfidenceSubratings = []
+        let ratingSubtractionSubratings = []
+
+        let ratingConfidenceIDs = ["webrep", "selfass", "audit"]
+        let subratingTitles = ["Web Rep", "Self-Ass", "Audit"]
+
+        document.getElementById("rating-confidence-subrating").querySelectorAll(".subrating").forEach((_, i) => {
+            let subrating = gauge(`#rating-confidence-${ratingConfidenceIDs[i]}`, {
+                title: subratingTitles[i],
+                size: 250,
+                ringWidth: 50,
+                clipWidth: 250,
+                maxValue: 700,
+                transitionMs: 750,
+                metricClass: "subscore",
+                hasHand: false,
+                hasMetric: true,
+                hasProgressBar: false,
+                hasMarkers: false,
+            })
+            subrating.render(0)
+            ratingConfidenceSubratings.push(subrating)
+        })
+
+        document.getElementById("rating-subtraction-subrating").querySelectorAll(".subrating").forEach((_, i) => {
+            let subrating = gauge(`#rating-subtraction-${ratingConfidenceIDs[i]}`, {
+                title: subratingTitles[i],
+                size: 250,
+                ringWidth: 50,
+                clipWidth: 250,
+                maxValue: 700,
+                transitionMs: 750,
+                metricClass: "subscore",
+                hasHand: false,
+                hasMetric: true,
+                hasProgressBar: false,
+                hasMarkers: false,
+            })
+            subrating.render(0)
+            ratingSubtractionSubratings.push(subrating)
+        })
+
+        // var ratingConfidenceWebrep = gauge('#rating-confidence-webrep', {
+        //     size: 250,
+        //     ringWidth: 50,
+        //     clipWidth: 250,
+        //     maxValue: 700,
+        //     transitionMs: 750,
+        //     hasHand: false,
+        //     hasMetric: true,
+        //     hasProgressBar: false,
+        //     hasMarkers: false,
+        // });
+        // ratingConfidenceWebrep.render(0)
+
+        // var ratingConfidenceSelfass = gauge('#rating-confidence-selfass', {
+        //     size: 250,
+        //     ringWidth: 50,
+        //     clipWidth: 250,
+        //     maxValue: 700,
+        //     transitionMs: 750,
+        //     hasHand: false,
+        //     hasMetric: true,
+        //     hasProgressBar: false,
+        //     hasMarkers: false,
+        // });
+        // ratingConfidenceSelfass.render(0)
+
+        // var ratingConfidenceAudit = gauge('#rating-confidence-audit', {
+        //     size: 250,
+        //     ringWidth: 50,
+        //     clipWidth: 250,
+        //     maxValue: 700,
+        //     transitionMs: 750,
+        //     hasHand: false,
+        //     hasMetric: true,
+        //     hasProgressBar: false,
+        //     hasMarkers: false,
+        // });
+        // ratingConfidenceAudit.render(0)
+    </script>
+</body>
+</html>
