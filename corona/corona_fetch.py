@@ -102,6 +102,9 @@ def get_corona():
             if trailing == "" and cat == "dead":
                 trailing = text.split(state)[0].split(",")[0]
                 trailing = trailing.replace("(", "").replace(")", "").strip()
+            
+            if "-" in trailing:
+                trailing = trailing.split("-")[0].strip()
 
             state_map[state.lower()] = int(trailing)
 
